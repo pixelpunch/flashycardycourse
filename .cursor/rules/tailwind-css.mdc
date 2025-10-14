@@ -1,0 +1,90 @@
+---
+alwaysApply: true
+description: "Tailwind CSS styling guidelines and configuration for the project"
+---
+
+# Tailwind CSS Guidelines
+
+This project uses **Tailwind CSS v3.4.18** with **tailwindcss-animate v1.0.7** for all styling.
+
+## Version Requirements
+
+- **Tailwind CSS**: v3.4.18 (exact version specified in [package.json](mdc:package.json))
+- **tailwindcss-animate**: v1.0.7 for animation utilities
+- **PostCSS**: Configured via [postcss.config.mjs](mdc:postcss.config.mjs)
+
+## Configuration Files
+
+- **Main config**: [tailwind.config.ts](mdc:tailwind.config.ts) - Contains theme extensions, content paths, and plugin configurations
+- **Global styles**: [src/app/globals.css](mdc:src/app/globals.css) - Defines CSS variables, Tailwind directives, and base styles
+
+## Styling Standards
+
+### 1. Use Semantic Color System
+- Use CSS variable-based colors defined in [globals.css](mdc:src/app/globals.css)
+- Primary colors: `background`, `foreground`, `primary`, `secondary`, `muted`, `accent`
+- Component colors: `card`, `popover`, `sidebar` variants
+- State colors: `destructive` for error states
+- Always use these semantic colors instead of arbitrary color values
+
+### 2. Dark Mode Support
+- Dark mode is configured with `class` strategy in [tailwind.config.ts](mdc:tailwind.config.ts)
+- Use `dark:` prefix for dark mode variants
+- All components must support both light and dark themes
+- Colors automatically switch via CSS variables - no manual dark mode color definitions needed
+
+### 3. Animation Guidelines
+- Use `tailwindcss-animate` for animations and transitions
+- Prefer built-in animation classes over custom CSS animations
+- Common classes: `animate-spin`, `animate-pulse`, `animate-bounce`, `animate-fade-in`, etc.
+
+### 4. Typography
+- Use Poppins font family (configured in [tailwind.config.ts](mdc:tailwind.config.ts) and [globals.css](mdc:src/app/globals.css))
+- Font family is applied globally via CSS variables
+- Use Tailwind's typography utilities: `text-sm`, `text-base`, `text-lg`, `text-xl`, etc.
+
+### 5. Spacing and Layout
+- Use Tailwind's spacing scale consistently
+- Custom radius values are defined: `rounded-lg`, `rounded-md`, `rounded-sm`
+- Use CSS Grid and Flexbox utilities for layouts
+
+### 6. Component Integration
+- Must integrate seamlessly with shadcn/ui components
+- Use the same color system and design tokens
+- Follow shadcn/ui component patterns for consistency
+
+## Best Practices
+
+### DO:
+- ✅ Use utility-first approach with Tailwind classes
+- ✅ Use semantic color variables (`bg-background`, `text-foreground`, etc.)
+- ✅ Apply responsive design with mobile-first approach
+- ✅ Use `@apply` directive sparingly in [globals.css](mdc:src/app/globals.css) for base styles only
+- ✅ Leverage tailwindcss-animate for smooth animations
+- ✅ Test in both light and dark modes
+
+### DON'T:
+- ❌ Use arbitrary color values (e.g., `bg-[#ff0000]`) - use semantic colors instead
+- ❌ Create custom CSS when Tailwind utilities exist
+- ❌ Use `!important` - structure classes properly instead
+- ❌ Mix other CSS frameworks with Tailwind
+- ❌ Ignore responsive design principles
+
+## Class Organization
+Order Tailwind classes in this sequence:
+1. Layout (display, position, top/left/right/bottom)
+2. Flexbox/Grid (flex, grid, justify, align, gap)
+3. Spacing (margin, padding)
+4. Sizing (width, height, max-width, etc.)
+5. Typography (font, text, leading, tracking)
+6. Background & Borders (bg, border, rounded)
+7. Effects (shadow, opacity, transform)
+8. Interactions (hover, focus, active states)
+9. Responsive variants (sm:, md:, lg:, xl:)
+10. Dark mode variants (dark:)
+
+## Content Paths
+Ensure all new components are included in the content paths defined in [tailwind.config.ts](mdc:tailwind.config.ts):
+- `./src/pages/**/*.{js,ts,jsx,tsx,mdx}`
+- `./src/components/**/*.{js,ts,jsx,tsx,mdx}`
+- `./src/app/**/*.{js,ts,jsx,tsx,mdx}`

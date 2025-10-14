@@ -1,0 +1,253 @@
+---
+alwaysApply: true
+---
+
+# Clerk Authentication & Data Security Guidelines
+
+This project uses **Clerk** for authentication with **strict data isolation** - users can ONLY access their own data.
+
+## Authentication Setup
+
+- **Middleware**: [src/middleware.ts](mdc:src/middleware.ts) - Clerk middleware protects all routes
+- **User Schema**: [src/lib/db/schema/users.ts](mdc:src/lib/db/schema/users.ts) - Links `clerkId` to internal user records
+- **Data Hierarchy**: User → Decks → Cards (each level must respect ownership)
+
+## CRITICAL SECURITY REQUIREMENTS
+
+### 1. User Identification Pattern
+**ALWAYS** get the user's database ID from their Clerk ID first:
+
+```typescript
+import { auth } from "@clerk/nextjs/server";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+
+// ✅ CORRECT - Get user from Clerk session
+const { userId: clerkUserId } = auth();
+if (!clerkUserId) {
+  throw new Error("Unauthorized");
+}
+
+// Get internal user ID
+const user = await db.select().from(users).where(eq(users.clerkId, clerkUserId));
+if (!user.length) {
+  throw new Error("User not found");
+}
+const dbUserId = user[0].id;
+```
+
+### 2. Deck Access Control
+**ALWAYS** filter decks by the authenticated user's ID:
+
+```typescript
+// ✅ CORRECT - User can only see their own decks
+const userDecks = await db
+  .select()
+  .from(decks)
+  .where(eq(decks.userId, dbUserId));
+
+// ✅ CORRECT - Get specific deck with ownership check
+const deck = await db
+  .select()
+  .from(decks)
+  .where(and(
+    eq(decks.id, deckId),
+    eq(decks.userId, dbUserId)
+  ));
+
+// ❌ WRONG - No user filter allows access to any deck
+const allDecks = await db.select().from(decks);
+```
+
+### 3. Card Access Control
+**ALWAYS** ensure cards belong to user's decks:
+
+```typescript
+// ✅ CORRECT - Get cards with deck ownership verification
+const userCards = await db
+  .select()
+  .from(cards)
+  .innerJoin(decks, eq(cards.deckId, decks.id))
+  .where(eq(decks.userId, dbUserId));
+
+// ✅ CORRECT - Get specific card with ownership chain
+const card = await db
+  .select()
+  .from(cards)
+  .innerJoin(decks, eq(cards.deckId, decks.id))
+  .where(and(
+    eq(cards.id, cardId),
+    eq(decks.userId, dbUserId)
+  ));
+
+// ❌ WRONG - Direct card access bypasses ownership
+const card = await db.select().from(cards).where(eq(cards.id, cardId));
+```
+
+### 4. API Route Security Pattern
+**EVERY** API route must implement this security pattern:
+
+```typescript
+// ✅ CORRECT API Route Pattern
+export async function GET(request: NextRequest) {
+  try {
+    // 1. Check authentication
+    const { userId: clerkUserId } = auth();
+    if (!clerkUserId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // 2. Get user's database ID
+    const user = await db.select().from(users).where(eq(users.clerkId, clerkUserId));
+    if (!user.length) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    const dbUserId = user[0].id;
+
+    // 3. Apply user-specific filtering to ALL queries
+    const data = await db
+      .select()
+      .from(decks)
+      .where(eq(decks.userId, dbUserId));
+
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+```
+
+### 5. Server Action Security Pattern
+**ALL** Server Actions must verify ownership:
+
+```typescript
+"use server";
+
+export async function updateDeck(deckId: string, data: UpdateDeckData) {
+  // 1. Authentication check
+  const { userId: clerkUserId } = auth();
+  if (!clerkUserId) {
+    throw new Error("Unauthorized");
+  }
+
+  // 2. Get user's database ID
+  const user = await db.select().from(users).where(eq(users.clerkId, clerkUserId));
+  if (!user.length) {
+    throw new Error("User not found");
+  }
+  const dbUserId = user[0].id;
+
+  // 3. Verify ownership before update
+  const existingDeck = await db
+    .select()
+    .from(decks)
+    .where(and(
+      eq(decks.id, deckId),
+      eq(decks.userId, dbUserId)
+    ));
+
+  if (!existingDeck.length) {
+    throw new Error("Deck not found or access denied");
+  }
+
+  // 4. Perform update with ownership constraint
+  const updatedDeck = await db
+    .update(decks)
+    .set({ ...data, updatedAt: new Date() })
+    .where(and(
+      eq(decks.id, deckId),
+      eq(decks.userId, dbUserId)
+    ))
+    .returning();
+
+  return updatedDeck[0];
+}
+```
+
+### 6. Component Data Fetching
+**ALWAYS** use server components with proper filtering:
+
+```typescript
+// ✅ CORRECT - Server Component with user filtering
+export default async function DecksPage() {
+  const { userId: clerkUserId } = auth();
+  if (!clerkUserId) {
+    redirect("/sign-in");
+  }
+
+  const user = await db.select().from(users).where(eq(users.clerkId, clerkUserId));
+  if (!user.length) {
+    redirect("/sign-up");
+  }
+
+  // Only fetch user's own decks
+  const userDecks = await db
+    .select()
+    .from(decks)
+    .where(eq(decks.userId, user[0].id));
+
+  return <DecksGrid decks={userDecks} />;
+}
+```
+
+## Mandatory Security Checks
+
+### DO:
+- ✅ **ALWAYS** verify user authentication with `auth()` from Clerk
+- ✅ **ALWAYS** get user's database ID from their `clerkId`
+- ✅ **ALWAYS** filter all queries by user ownership
+- ✅ **ALWAYS** verify ownership before updates/deletes
+- ✅ **ALWAYS** use `and()` conditions for multi-field filtering
+- ✅ **ALWAYS** handle authentication errors gracefully
+- ✅ **ALWAYS** use transactions for multi-table operations
+- ✅ Use proper TypeScript types for all database operations
+
+### DON'T:
+- ❌ **NEVER** query data without user-specific filtering
+- ❌ **NEVER** trust URL parameters or form data for authorization
+- ❌ **NEVER** expose internal database IDs without ownership checks
+- ❌ **NEVER** skip authentication checks in API routes or server actions
+- ❌ **NEVER** use direct ID lookups without ownership verification
+- ❌ **NEVER** return data from users other than the authenticated user
+- ❌ **NEVER** allow cross-user data access through joins or relations
+
+## User Creation Pattern
+When creating new users from Clerk webhooks:
+
+```typescript
+// ✅ CORRECT - Create user with Clerk data
+const newUser = await db.insert(users).values({
+  clerkId: clerkUser.id,
+  email: clerkUser.emailAddresses[0]?.emailAddress,
+  firstName: clerkUser.firstName,
+  lastName: clerkUser.lastName,
+}).returning();
+```
+
+## Error Handling for Authorization
+```typescript
+// ✅ Standard error responses for unauthorized access
+if (!clerkUserId) {
+  return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+}
+
+if (!userOwnsResource) {
+  return NextResponse.json({ error: "Access denied" }, { status: 403 });
+}
+
+if (!resourceExists) {
+  return NextResponse.json({ error: "Resource not found" }, { status: 404 });
+}
+```
+
+## Required Imports for Security
+```typescript
+import { auth } from "@clerk/nextjs/server";
+import { db } from "@/lib/db";
+import { users, decks, cards } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
+import { NextRequest, NextResponse } from "next/server";
+```
+
+This security model ensures **complete data isolation** - users can only ever access, modify, or delete their own data. Every database operation must include proper authorization checks.

@@ -1,0 +1,212 @@
+---
+alwaysApply: true
+description: "Drizzle ORM database interaction patterns and requirements"
+---
+
+# Drizzle Database Guidelines
+
+This project uses **Drizzle ORM** with **Neon Postgres** database for all data operations.
+
+## Configuration Files
+
+- **Drizzle config**: [drizzle.config.ts](mdc:drizzle.config.ts) - Main Drizzle configuration
+- **Database connection**: [src/lib/db.ts](mdc:src/lib/db.ts) - Database instance and connection pool
+- **Schema definitions**: [src/lib/db/schema/](mdc:src/lib/db/schema/) - All database table schemas
+- **Setup documentation**: [DATABASE_SETUP.md](mdc:DATABASE_SETUP.md) - Database setup instructions
+
+## Mandatory Requirements
+
+### 1. Database Instance Usage
+**ALWAYS** use the configured database instance from [src/lib/db.ts](mdc:src/lib/db.ts):
+
+```typescript
+import { db } from "@/lib/db";
+```
+
+**NEVER** create new database connections or instances. The singleton pattern is required.
+
+### 2. Schema Import Requirements
+**ALWAYS** import table schemas from the centralized schema exports:
+
+```typescript
+// ✅ CORRECT - Import from schema index
+import { users, decks, cards } from "@/lib/db/schema";
+
+// ❌ WRONG - Direct file imports
+import { users } from "@/lib/db/schema/users";
+```
+
+### 3. Query Patterns
+
+#### SELECT Operations
+```typescript
+// Basic select
+const allUsers = await db.select().from(users);
+
+// Select with conditions
+const user = await db.select().from(users).where(eq(users.id, userId));
+
+// Select with joins
+const userDecks = await db
+  .select()
+  .from(decks)
+  .innerJoin(users, eq(decks.userId, users.id))
+  .where(eq(users.id, userId));
+```
+
+#### INSERT Operations
+```typescript
+// Single insert with returning
+const newUser = await db.insert(users).values({
+  clerkId: "user_123",
+  email: "user@example.com",
+  firstName: "John",
+  lastName: "Doe"
+}).returning();
+
+// Multiple inserts
+const newCards = await db.insert(cards).values([
+  { deckId: deckId, front: "Question 1", back: "Answer 1" },
+  { deckId: deckId, front: "Question 2", back: "Answer 2" }
+]).returning();
+```
+
+#### UPDATE Operations
+```typescript
+// Update with conditions
+const updatedUser = await db
+  .update(users)
+  .set({ 
+    firstName: "Updated Name",
+    updatedAt: new Date()
+  })
+  .where(eq(users.id, userId))
+  .returning();
+```
+
+#### DELETE Operations
+```typescript
+// Delete with conditions
+const deletedUser = await db
+  .delete(users)
+  .where(eq(users.id, userId))
+  .returning();
+```
+
+### 4. Required Imports
+Always include necessary Drizzle operators:
+
+```typescript
+import { eq, and, or, like, ilike, inArray, isNull, isNotNull } from "drizzle-orm";
+import { desc, asc } from "drizzle-orm";
+```
+
+### 5. Type Safety
+- **ALWAYS** use proper TypeScript types
+- **ALWAYS** use `.returning()` for insert/update/delete operations when you need the result
+- **NEVER** use `any` types for database operations
+
+```typescript
+// ✅ CORRECT - Properly typed
+const user: typeof users.$inferSelect = await db
+  .select()
+  .from(users)
+  .where(eq(users.id, userId))
+  .then(rows => rows[0]);
+
+// ✅ CORRECT - Insert type
+const newUserData: typeof users.$inferInsert = {
+  clerkId: "user_123",
+  email: "user@example.com",
+  firstName: "John",
+  lastName: "Doe"
+};
+```
+
+## Database Schema Structure
+
+Current tables and their relationships:
+
+### Users Table
+- Primary key: `id` (UUID)
+- External key: `clerkId` (unique, for Clerk authentication)
+- Fields: `email`, `firstName`, `lastName`, `createdAt`, `updatedAt`
+
+### Decks Table
+- Primary key: `id` (UUID)
+- Foreign key: `userId` → `users.id` (cascade delete)
+- Fields: `name`, `description`, `createdAt`, `updatedAt`
+
+### Cards Table
+- Primary key: `id` (UUID)
+- Foreign key: `deckId` → `decks.id` (cascade delete)
+- Fields: `front`, `back`, `createdAt`, `updatedAt`
+
+## Migration Commands
+
+Use these npm scripts for database operations:
+
+```bash
+# Development - push schema changes directly
+npm run db:push
+
+# Production - generate and apply migrations
+npm run db:generate
+npm run db:migrate
+
+# Database management
+npm run db:studio  # Open Drizzle Studio
+npm run db:pull    # Pull schema from database
+```
+
+## Strict Requirements
+
+### DO:
+- ✅ Always use the centralized `db` instance from [src/lib/db.ts](mdc:src/lib/db.ts)
+- ✅ Import schemas from [src/lib/db/schema](mdc:src/lib/db/schema/index.ts)
+- ✅ Use proper Drizzle query patterns
+- ✅ Handle errors appropriately with try-catch blocks
+- ✅ Use `.returning()` when you need operation results
+- ✅ Maintain proper TypeScript typing
+- ✅ Use transactions for complex operations
+- ✅ Follow the established UUID primary key pattern
+
+### DON'T:
+- ❌ Create new database connections or pools
+- ❌ Use raw SQL queries without Drizzle
+- ❌ Import schema files directly (use the index export)
+- ❌ Ignore database constraints or foreign key relationships
+- ❌ Use string literals for table/column names when schema objects exist
+- ❌ Skip error handling for database operations
+- ❌ Mix different ORM patterns or database libraries
+
+## Error Handling Pattern
+
+```typescript
+try {
+  const result = await db.insert(users).values(userData).returning();
+  return result[0];
+} catch (error) {
+  console.error("Database operation failed:", error);
+  throw new Error("Failed to create user");
+}
+```
+
+## Transaction Example
+
+```typescript
+import { db } from "@/lib/db";
+import { users, decks } from "@/lib/db/schema";
+
+const result = await db.transaction(async (tx) => {
+  const user = await tx.insert(users).values(userData).returning();
+  const deck = await tx.insert(decks).values({
+    userId: user[0].id,
+    name: "Default Deck"
+  }).returning();
+  
+  return { user: user[0], deck: deck[0] };
+});
+```
+
+This pattern ensures consistent, type-safe, and maintainable database operations throughout the application.
