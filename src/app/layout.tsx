@@ -2,12 +2,10 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import {
   ClerkProvider,
-  SignInButton,
-  SignUpButton,
   SignedIn,
-  SignedOut,
   UserButton,
 } from "@clerk/nextjs";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -28,6 +26,8 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider
+      afterSignInUrl="/dashboard"
+      afterSignUpUrl="/dashboard"
       appearance={{
         baseTheme: 'dark',
         variables: {
@@ -97,18 +97,6 @@ export default function RootLayout({
                   </h1>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <SignedOut>
-                    <div className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-colors">
-                      <SignInButton mode="modal">
-                        Sign In
-                      </SignInButton>
-                    </div>
-                    <div className="inline-flex items-center px-4 py-2 border border-border text-sm font-medium rounded-lg text-foreground bg-secondary hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-colors">
-                      <SignUpButton mode="modal">
-                        Sign Up
-                      </SignUpButton>
-                    </div>
-                  </SignedOut>
                   <SignedIn>
                     <UserButton 
                       appearance={{
@@ -140,6 +128,7 @@ export default function RootLayout({
           <main>
             {children}
           </main>
+          <Toaster />
         </body>
       </html>
     </ClerkProvider>
