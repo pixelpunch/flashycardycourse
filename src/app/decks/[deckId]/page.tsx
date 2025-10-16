@@ -8,7 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CardList } from "@/components/card-list";
 import { EditDeckDialog } from "@/components/edit-deck-dialog";
+import { DeleteDeckDialog } from "@/components/delete-deck-dialog";
 import { AddCardModal } from "@/components/add-card-modal";
+import { GenerateAICardsButton } from "@/components/generate-ai-cards-button";
 import Link from "next/link";
 
 interface DeckPageProps {
@@ -20,11 +22,14 @@ interface DeckPageProps {
 export default async function DeckPage({ params }: DeckPageProps) {
   const { deckId } = await params;
 
-  // 1. Check authentication
-  const { userId: clerkUserId } = await auth();
+  // 1. Check authentication and feature access
+  const { userId: clerkUserId, has } = await auth();
   if (!clerkUserId) {
     redirect("/");
   }
+
+  // Check if user has AI generation feature
+  const hasAIFeature = has({ feature: 'ai_flashcard_generation' });
 
   // 2. Get user's database ID or create user if doesn't exist
   let user = await db.select().from(users).where(eq(users.clerkId, clerkUserId));
@@ -133,6 +138,7 @@ export default async function DeckPage({ params }: DeckPageProps) {
               </p>
             </div>
             <div className="flex gap-3">
+              <DeleteDeckDialog deck={deck} cardCount={deckCards.length} />
               <EditDeckDialog deck={deck} />
               {deckCards.length > 0 && (
                 <Button asChild>
@@ -159,8 +165,13 @@ export default async function DeckPage({ params }: DeckPageProps) {
         </div>
 
         {/* Action Buttons */}
-        <div className="mb-8">
+        <div className="mb-8 flex gap-3">
           <AddCardModal deckId={deckId} />
+          <GenerateAICardsButton 
+            deckId={deckId} 
+            hasAIFeature={hasAIFeature} 
+            hasDescription={!!deck.description && deck.description.trim() !== ""} 
+          />
         </div>
 
         {/* Cards Display */}

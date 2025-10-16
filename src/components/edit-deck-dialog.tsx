@@ -120,7 +120,7 @@ export function EditDeckDialog({ deck, trigger }: EditDeckDialogProps) {
           <div className="mb-6">
             <h2 className="text-lg font-semibold leading-none">Edit Deck</h2>
             <p className="text-sm text-muted-foreground mt-2">
-              Update your deck's name and description.
+              Update your deck&apos;s name and description.
             </p>
           </div>
 

@@ -17,6 +17,10 @@ CLERK_SECRET_KEY=sk_test_your_secret_key_here
 # Clerk Webhook Secret (optional for now)
 CLERK_WEBHOOK_SECRET=whsec_your_webhook_secret_here
 
+# OpenAI API Key - Required for AI flashcard generation
+# Get this from: https://platform.openai.com/api-keys
+OPENAI_API_KEY=sk-your_openai_api_key_here
+
 # Neon Database - ✅ ALREADY FILLED IN FOR YOU!
 DATABASE_URL=postgresql://neondb_owner:npg_RCo3Py1WIxTM@ep-shy-smoke-agh9jv4s-pooler.c-2.eu-central-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require
 ```
@@ -30,14 +34,23 @@ DATABASE_URL=postgresql://neondb_owner:npg_RCo3Py1WIxTM@ep-shy-smoke-agh9jv4s-po
    - **Publishable Key** (starts with `pk_test_` or `pk_live_`)
    - **Secret Key** (starts with `sk_test_` or `sk_live_`) - Click "Show" to reveal it
 
-### Step 3: Update `.env.local`
+### Step 3: Get Your OpenAI API Key
+
+1. Go to [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Sign in or create an account
+3. Click on **Create new secret key**
+4. Copy the API key (starts with `sk-`)
+5. **Important**: Save this key securely - you won't be able to see it again!
+
+### Step 4: Update `.env.local`
 
 Replace these values in your `.env.local` file:
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Paste your Publishable Key
 - `CLERK_SECRET_KEY` - Paste your Secret Key
+- `OPENAI_API_KEY` - Paste your OpenAI API Key
 - `DATABASE_URL` - **Already set!** (retrieved from your Neon project)
 
-### Step 4: Run the Sync Command
+### Step 5: Run the Sync Command
 
 After saving your `.env.local` file, run:
 
@@ -47,7 +60,7 @@ npm run sync:users
 
 This will sync all your Clerk users (including `dasfamilych@gmail.com`) to your Neon database.
 
-### Step 5: Verify the Sync
+### Step 6: Verify the Sync
 
 Check your database to confirm the user was created:
 

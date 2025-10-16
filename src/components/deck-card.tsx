@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -37,7 +37,11 @@ export function DeckCard({ deck, cardCount }: DeckCardProps) {
         
         <CardFooter className="pt-0 flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Updated {new Date(deck.updatedAt).toLocaleDateString()}
+            Updated {new Date(deck.updatedAt).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric'
+            })}
           </p>
           <Button 
             variant="outline" 

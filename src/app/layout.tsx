@@ -5,6 +5,7 @@ import {
   SignedIn,
   UserButton,
 } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -29,7 +30,7 @@ export default function RootLayout({
       afterSignInUrl="/dashboard"
       afterSignUpUrl="/dashboard"
       appearance={{
-        baseTheme: 'dark',
+        baseTheme: dark,
         variables: {
           colorPrimary: 'oklch(0.923 0.003 48.717)',
           colorBackground: 'oklch(0.147 0.004 49.25)',
@@ -100,7 +101,7 @@ export default function RootLayout({
                   <SignedIn>
                     <UserButton 
                       appearance={{
-                        baseTheme: 'dark',
+                        baseTheme: dark,
                         elements: {
                           avatarBox: {
                             width: '2.25rem',

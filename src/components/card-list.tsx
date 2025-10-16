@@ -1,7 +1,6 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { EditCardModal } from "@/components/edit-card-modal";
 import { DeleteCardDialog } from "@/components/delete-card-dialog";
 
@@ -22,7 +21,7 @@ interface CardListProps {
 export function CardList({ cards, deckId }: CardListProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {cards.map((card, index) => (
+      {cards.map((card) => (
         <Card key={card.id} className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-end gap-1 mb-2" onClick={(e) => e.stopPropagation()}>

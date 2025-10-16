@@ -30,3 +30,4 @@ npx shadcn@latest add [component-name]
 - Always check if a component is already available before installing
 - Follow shadcn/ui component patterns and styling conventions
 - Use the configured theme and design tokens from the shadcn/ui setup
+- Ensure that any buttons with white background has black text on it

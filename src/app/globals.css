@@ -89,3 +89,72 @@
   
 }
 
+@layer utilities {
+  /* 3D Transform utilities for flashcard flip effect */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+  
+  .backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+}
+
+/* Clerk Pricing Table Custom Styling for Dark Mode */
+.clerk-pricing-wrapper {
+  /* Ensure all buttons have proper contrast */
+  & button[type="submit"],
+  & button[data-variant="primary"],
+  & button:not([data-variant]) {
+    background-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+    border: none !important;
+  }
+  
+  & button[type="submit"]:hover,
+  & button[data-variant="primary"]:hover,
+  & button:not([data-variant]):hover {
+    background-color: hsl(var(--primary) / 0.9) !important;
+  }
+  
+  /* Style active badges/labels */
+  & [class*="badge"],
+  & [class*="label"],
+  & span[data-badge] {
+    background-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+  }
+  
+  /* Ensure card backgrounds work in dark mode */
+  & [class*="card"] {
+    background-color: hsl(var(--card)) !important;
+    color: hsl(var(--card-foreground)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+  
+  /* Text elements */
+  & h1, & h2, & h3, & h4, & h5, & h6,
+  & p, & span, & div {
+    color: hsl(var(--foreground)) !important;
+  }
+  
+  /* Price text - ensure visibility */
+  & [class*="price"] {
+    color: hsl(var(--foreground)) !important;
+  }
+  
+  /* Feature list items */
+  & ul li {
+    color: hsl(var(--foreground)) !important;
+  }
+}
+

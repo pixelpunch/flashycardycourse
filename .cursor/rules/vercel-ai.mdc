@@ -1,0 +1,425 @@
+---
+alwaysApply: true
+---
+
+# Vercel AI Library Guidelines
+
+This project uses **Vercel AI SDK** for AI-powered features, specifically **AI flashcard generation**.
+
+## Installation & Setup
+
+- **Package**: `ai` npm package
+- **Provider**: OpenAI via Vercel AI SDK
+- **Primary Use Case**: Generating flashcards from user-provided topics or content
+
+## Important Requirements
+
+### Deck Description Requirement
+**ALL** AI flashcard generation requires the deck to have a description. The deck description is **MANDATORY** and used to:
+- Guide the AI in generating contextually relevant flashcards
+- Ensure cards align with the user's specific learning objectives
+- Provide proper context for the subject matter
+
+**ALWAYS** check if the deck has a description before attempting AI generation:
+
+```typescript
+// ✅ CORRECT - Check for deck description before AI generation
+if (!deckData.description || deckData.description.trim() === "") {
+  return { 
+    success: false, 
+    error: "Please add a description to your deck before generating cards. The description helps the AI create relevant flashcards tailored to your specific needs.",
+    requiresDescription: true
+  };
+}
+```
+
+### AI Prompt Design
+The AI prompt **MUST**:
+- Include the deck title
+- Prominently feature the deck description
+- Instruct the AI to analyze the deck description to determine the learning type
+- Use context-aware formatting:
+  - **Language learning**: Direct translations (Front: source language, Back: target language)
+  - **Other subjects**: Question-answer format
+- Explicitly instruct the AI to generate cards tailored to the description
+- Focus on the specific subject matter defined in the description
+
+## Core Pattern: Structured Data Generation
+
+Use `generateObject` from the `ai` package to generate structured, type-safe AI outputs with Zod schemas.
+
+### Required Imports
+
+```typescript
+import { generateObject } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { z } from 'zod';
+```
+
+## Flashcard Generation Pattern
+
+### Schema Definition
+
+Define a Zod schema for flashcard generation that produces an array of cards:
+
+```typescript
+// ✅ CORRECT - Flashcard generation schema
+const FlashcardGenerationSchema = z.object({
+  cards: z.array(
+    z.object({
+      front: z.string().min(1, "Front content is required").max(1000),
+      back: z.string().min(1, "Back content is required").max(1000),
+    })
+  ).min(1, "At least one card must be generated").max(50, "Maximum 50 cards per generation"),
+});
+
+type FlashcardGenerationOutput = z.infer<typeof FlashcardGenerationSchema>;
+```
+
+### Server Action Implementation
+
+**ALWAYS** implement AI generation in server actions with proper authentication and feature gating:
+
+```typescript
+"use server";
+
+import { auth } from "@clerk/nextjs/server";
+import { generateObject } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { z } from "zod";
+import { db } from "@/lib/db";
+import { users, decks, cards } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
+
+// Input validation schema
+const GenerateFlashcardsSchema = z.object({
+  deckId: z.string().uuid(),
+  topic: z.string().min(1, "Topic is required").max(500),
+  numberOfCards: z.number().min(1).max(50),
+  additionalContext: z.string().max(2000).optional(),
+});
+
+type GenerateFlashcardsInput = z.infer<typeof GenerateFlashcardsSchema>;
+
+// Output schema for AI generation
+const FlashcardGenerationSchema = z.object({
+  cards: z.array(
+    z.object({
+      front: z.string(),
+      back: z.string(),
+    })
+  ),
+});
+
+export async function generateFlashcards(input: GenerateFlashcardsInput) {
+  // 1. Validate input
+  const validatedInput = GenerateFlashcardsSchema.parse(input);
+
+  // 2. Authentication
+  const { userId: clerkUserId, has } = await auth();
+  if (!clerkUserId) {
+    throw new Error("Unauthorized");
+  }
+
+  // 3. Feature gate check - AI requires Pro plan
+  const canUseAI = has({ feature: 'ai_flashcard_generation' });
+  if (!canUseAI) {
+    throw new Error("AI flashcard generation requires a Pro subscription");
+  }
+
+  // 4. Get user ID
+  const user = await db.select().from(users).where(eq(users.clerkId, clerkUserId));
+  if (!user.length) {
+    throw new Error("User not found");
+  }
+  const dbUserId = user[0].id;
+
+  // 5. Verify deck ownership
+  const deck = await db
+    .select()
+    .from(decks)
+    .where(and(
+      eq(decks.id, validatedInput.deckId),
+      eq(decks.userId, dbUserId)
+    ));
+
+  if (!deck.length) {
+    throw new Error("Deck not found or access denied");
+  }
+
+  try {
+    // 6. Generate flashcards using Vercel AI SDK
+    const { object } = await generateObject({
+      model: openai('gpt-4o-mini'),
+      schema: FlashcardGenerationSchema,
+      prompt: `Generate exactly ${validatedInput.numberOfCards} educational flashcards for a deck titled: "${deckData.name}"
+
+Deck Description: ${deckData.description}
+
+CRITICAL INSTRUCTIONS:
+
+1. ANALYZE THE DECK DESCRIPTION to understand what type of learning this is (language learning, history, science, vocabulary, etc.)
+
+2. CHOOSE THE APPROPRIATE CARD FORMAT:
+
+   FOR LANGUAGE LEARNING (e.g., learning German, Spanish, French, etc.):
+   - Front: A word, phrase, or sentence in the SOURCE language (e.g., English)
+   - Back: The direct translation in the TARGET language (e.g., German)
+   - Keep it simple and direct - NO questions, NO explanations, just translations
+   - Example for English to German:
+     Front: "Hello"
+     Back: "Hallo"
+   - Example for sentences:
+     Front: "How are you?"
+     Back: "Wie geht es dir?"
+
+   FOR OTHER SUBJECTS (history, science, vocabulary, concepts, etc.):
+   - Front: A clear, concise question
+   - Back: A complete but concise answer
+   - Example:
+     Front: "What year did World War II end?"
+     Back: "1945"
+
+3. ENSURE QUALITY:
+   - Make cards concise and focused on one concept each
+   - Use proper grammar and spelling
+   - Ensure each card tests a unique item
+   - Align all cards with the deck description's learning objectives
+   - For language cards: include a variety of common words, phrases, and useful sentences
+   - For concept cards: cover different aspects of the topic
+
+Generate cards that will actually help someone learn effectively based on the deck description above.`,
+    });
+
+    // 7. Insert generated cards into database
+    if (object.cards.length === 0) {
+      throw new Error("No cards were generated");
+    }
+
+    const newCards = await db.insert(cards).values(
+      object.cards.map(card => ({
+        deckId: validatedInput.deckId,
+        front: card.front,
+        back: card.back,
+      }))
+    ).returning();
+
+    return { success: true, cards: newCards };
+  } catch (error) {
+    console.error("AI generation error:", error);
+    throw new Error("Failed to generate flashcards. Please try again.");
+  }
+}
+```
+
+## Model Selection
+
+### Available OpenAI Models (with Structured Output Support)
+- `gpt-4o` - Best quality, supports structured outputs, recommended for production
+- `gpt-4o-mini` - Fast, cost-effective, supports structured outputs, great for flashcards
+- `gpt-4-turbo-preview` - Older model, limited structured output support
+- `gpt-3.5-turbo` - Fastest, cheapest, but limited capabilities
+
+### Recommended Model for Flashcards
+```typescript
+model: openai('gpt-4o-mini') // Best balance of quality, speed, and cost for educational content
+// Alternative for higher quality: openai('gpt-4o')
+```
+
+**Important**: When using `generateObject()` with structured outputs, you MUST use models that support the `json_schema` format:
+- ✅ `gpt-4o` - Full support
+- ✅ `gpt-4o-mini` - Full support  
+- ❌ `gpt-4-turbo` - Does NOT support `json_schema` with `generateObject()`
+- ❌ `gpt-4` - Does NOT support `json_schema` with `generateObject()`
+
+## API Route Pattern (Alternative)
+
+If using API routes instead of server actions:
+
+```typescript
+import { auth } from "@clerk/nextjs/server";
+import { generateObject } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+  try {
+    const { userId, has } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const canUseAI = has({ feature: 'ai_flashcard_generation' });
+    if (!canUseAI) {
+      return NextResponse.json(
+        { error: "AI flashcard generation requires Pro plan" },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const validatedInput = GenerateFlashcardsSchema.parse(body);
+
+    // ... ownership verification and generation logic
+
+    return NextResponse.json({ success: true, cards: generatedCards });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## Streaming Support (Optional)
+
+For real-time card generation feedback:
+
+```typescript
+import { streamObject } from 'ai';
+
+export async function generateFlashcardsStream(input: GenerateFlashcardsInput) {
+  // ... authentication and validation
+
+  const { partialObjectStream } = await streamObject({
+    model: openai('gpt-4-turbo'),
+    schema: FlashcardGenerationSchema,
+    prompt: `Generate ${input.numberOfCards} flashcards about: ${input.topic}`,
+  });
+
+  return partialObjectStream;
+}
+```
+
+## Error Handling
+
+### Common Errors
+- **API Key Issues**: Ensure `OPENAI_API_KEY` is set in environment variables
+- **Rate Limits**: Handle OpenAI rate limit errors gracefully
+- **Invalid Schemas**: Always validate both input and output with Zod
+- **Token Limits**: Keep prompts under model's token limit
+
+### Error Response Pattern
+```typescript
+try {
+  const { object } = await generateObject({ /* ... */ });
+  return { success: true, data: object };
+} catch (error) {
+  if (error instanceof z.ZodError) {
+    return { success: false, error: "Validation failed", details: error.errors };
+  }
+  
+  console.error("AI generation error:", error);
+  return { success: false, error: "Failed to generate content" };
+}
+```
+
+## Environment Variables
+
+Required environment variable in `.env.local`:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+## Security Requirements
+
+### DO:
+- ✅ **ALWAYS** check authentication before AI generation
+- ✅ **ALWAYS** verify user has `ai_flashcard_generation` feature
+- ✅ **ALWAYS** verify resource ownership (deck belongs to user)
+- ✅ **ALWAYS** check if deck has a description before AI generation
+- ✅ **ALWAYS** validate inputs with Zod schemas
+- ✅ **ALWAYS** validate AI outputs match expected schema
+- ✅ **ALWAYS** use deck description in the AI prompt for context
+- ✅ Set reasonable limits on generation (e.g., max 50 cards)
+- ✅ Use server actions or API routes - never client-side AI calls
+- ✅ Handle errors gracefully and provide user-friendly messages
+- ✅ Log errors for debugging without exposing sensitive data
+
+### DON'T:
+- ❌ **NEVER** call AI APIs from client components
+- ❌ **NEVER** expose OpenAI API keys to the client
+- ❌ **NEVER** skip feature gate checks for AI features
+- ❌ **NEVER** allow AI generation without a deck description
+- ❌ **NEVER** allow unlimited generation requests
+- ❌ **NEVER** trust user input without Zod validation
+- ❌ **NEVER** skip ownership verification before inserting AI-generated cards
+- ❌ Don't use streaming for simple batch generation
+- ❌ Don't ignore AI generation errors
+
+## Best Practices
+
+1. **Prompt Engineering**: Write clear, specific prompts that include:
+   - The deck title and description (description is mandatory)
+   - Instructions for the AI to analyze the learning type (language vs. concepts)
+   - Context-aware card format instructions:
+     - Language learning: Direct translations (no questions, no explanations)
+     - Conceptual learning: Question-answer format
+   - Explicit instructions to tailor cards to the deck description
+   - Exact number of items to generate
+   - Quality expectations with specific examples
+   - Context and constraints specific to the deck's learning objectives
+
+2. **Schema Design**: Make schemas strict and specific:
+   - Use `.min()` and `.max()` for string lengths
+   - Set array bounds with `.min()` and `.max()`
+   - Provide helpful error messages
+
+3. **Cost Management**:
+   - Use cheaper models where appropriate
+   - Cache results when possible
+   - Set reasonable limits on generation
+   - Monitor API usage
+
+4. **User Experience**:
+   - Show loading states during generation
+   - Provide progress feedback for long generations
+   - Allow users to regenerate if unhappy with results
+   - Display clear error messages
+
+## Example Client Component Usage
+
+```typescript
+"use client";
+
+import { useState } from "react";
+import { generateFlashcards } from "@/app/actions/generate-flashcards";
+import { toast } from "sonner";
+
+export function GenerateCardsButton({ deckId }: { deckId: string }) {
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    try {
+      const result = await generateFlashcards({
+        deckId,
+        topic: "JavaScript Closures",
+        numberOfCards: 10,
+      });
+
+      if (result.success) {
+        toast.success(`Generated ${result.cards.length} flashcards!`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  return (
+    <button onClick={handleGenerate} disabled={isGenerating}>
+      {isGenerating ? "Generating..." : "Generate Flashcards with AI"}
+    </button>
+  );
+}
+```
+
+## Integration with Billing System
+
+AI features are gated by the `ai_flashcard_generation` feature which is only available on the `pro` plan. See [Clerk Billing Guidelines](mdc:.cursor/rules/clerk-billing.mdc) for more details on feature gating.
+
+This pattern ensures secure, type-safe, and user-friendly AI-powered flashcard generation throughout the application.

@@ -67,7 +67,7 @@ async function syncClerkUsers() {
         }
 
         // Create user in database
-        const newUser = await db
+        await db
           .insert(users)
           .values({
             clerkId: clerkUser.id,

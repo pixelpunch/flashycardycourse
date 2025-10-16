@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function DeckNotFound() {
+export default function StudyNotFound() {
   return (
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4">
       <Card className="max-w-md w-full">
@@ -18,17 +18,14 @@ export default function DeckNotFound() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">
-            Deck Not Found
+            Study Session Not Available
           </h1>
           <p className="text-muted-foreground mb-6">
-            The deck you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
+            The deck you&apos;re trying to study doesn&apos;t exist, you don&apos;t have access to it, or it has no cards yet.
           </p>
           <div className="flex gap-3 justify-center">
             <Button variant="outline" asChild>
               <Link href="/dashboard">Go to Dashboard</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/decks">View All Decks</Link>
             </Button>
           </div>
         </CardContent>
