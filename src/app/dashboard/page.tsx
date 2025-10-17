@@ -281,23 +281,25 @@ export default async function DashboardPage() {
         {/* Quick Actions */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-foreground mb-4">Quick Actions</h2>
-          <div className="flex justify-center">
-            <QuickStudyModal 
-              decks={userDecks}
-              deckCardCounts={deckCardCounts}
-              studySessions={serializedSessions}
-            >
-              <Card className="hover:bg-accent/50 transition-colors cursor-pointer w-full max-w-sm">
-                <CardContent className="p-4">
-                  <div className="flex flex-col items-center space-y-2 text-center">
-                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <span className="text-sm font-medium">Quick Study</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </QuickStudyModal>
+          <div className="flex justify-center items-center">
+            <div className="w-full max-w-sm">
+              <QuickStudyModal 
+                decks={userDecks}
+                deckCardCounts={deckCardCounts}
+                studySessions={serializedSessions}
+              >
+                <Card className="hover:bg-accent hover:bg-opacity-50 transition-colors cursor-pointer w-full">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col items-center justify-center space-y-2 text-center">
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <span className="text-sm font-medium">Quick Study</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </QuickStudyModal>
+            </div>
           </div>
         </div>
 
