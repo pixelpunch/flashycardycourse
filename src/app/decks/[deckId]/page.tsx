@@ -114,18 +114,18 @@ export default async function DeckPage({ params }: DeckPageProps) {
 
         {/* Deck Header */}
         <div className="mb-8">
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-4xl font-bold text-foreground">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                <h1 className="text-3xl sm:text-4xl font-bold text-foreground">
                   {deck.name}
                 </h1>
-                <Badge variant="secondary" className="text-sm">
+                <Badge variant="secondary" className="text-sm w-fit">
                   {deckCards.length} {deckCards.length === 1 ? 'card' : 'cards'}
                 </Badge>
               </div>
               {deck.description && (
-                <p className="text-lg text-muted-foreground mt-2">
+                <p className="text-base sm:text-lg text-muted-foreground mt-2">
                   {deck.description}
                 </p>
               )}
@@ -137,11 +137,11 @@ export default async function DeckPage({ params }: DeckPageProps) {
                 })}
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-2 sm:gap-3 justify-start sm:justify-end">
               <DeleteDeckDialog deck={deck} cardCount={deckCards.length} />
               <EditDeckDialog deck={deck} />
               {deckCards.length > 0 && (
-                <Button asChild>
+                <Button asChild className="w-full sm:w-auto">
                   <Link href={`/decks/${deckId}/study`}>
                     <svg
                       className="h-4 w-4 mr-2"
@@ -165,7 +165,7 @@ export default async function DeckPage({ params }: DeckPageProps) {
         </div>
 
         {/* Action Buttons */}
-        <div className="mb-8 flex gap-3">
+        <div className="mb-8 flex flex-wrap gap-2 sm:gap-3">
           <AddCardModal deckId={deckId} />
           <GenerateAICardsButton 
             deckId={deckId} 

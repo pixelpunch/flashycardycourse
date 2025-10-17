@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DeckCard } from "@/components/deck-card";
 import { CreateDeckDialog } from "@/components/create-deck-dialog";
-import { StatsModal } from "@/components/stats-modal";
 import { QuickStudyModal } from "@/components/quick-study-modal";
 import Link from "next/link";
 
@@ -121,45 +120,16 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-muted-foreground">Total Decks</p>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-3xl font-bold text-foreground">{totalDecks}</p>
-                    {hasDeckLimit && (
-                      <span className="text-sm font-medium text-muted-foreground">/ 3</span>
-                    )}
-                  </div>
-                  {hasDeckLimit && (
-                    <div className="mt-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full transition-all ${
-                              totalDecks >= 3 ? 'bg-destructive' : 
-                              totalDecks >= 2 ? 'bg-yellow-500' : 
-                              'bg-primary'
-                            }`}
-                            style={{ width: `${(totalDecks / 3) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {totalDecks >= 3 ? 'Limit reached' : `${3 - totalDecks} remaining`}
-                      </p>
-                    </div>
-                  )}
-                  {hasUnlimitedDecks && (
-                    <p className="text-xs text-primary mt-1 font-medium">Unlimited</p>
-                  )}
-                </div>
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+        {/* Statistics Card */}
+        <Card className="mb-8">
+          <CardContent className="px-6 py-4">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Your Learning Progress</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {/* Total Decks */}
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <svg
-                    className="h-6 w-6 text-primary"
+                    className="h-5 w-5 text-primary"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -172,20 +142,25 @@ export default async function DashboardPage() {
                     />
                   </svg>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Cards</p>
-                  <p className="text-3xl font-bold text-foreground">{totalCards}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-muted-foreground">Total Decks</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-bold text-foreground">{totalDecks}</p>
+                    {hasDeckLimit && (
+                      <span className="text-sm font-medium text-muted-foreground">/ 3</span>
+                    )}
+                  </div>
+                  {hasUnlimitedDecks && (
+                    <p className="text-xs text-primary font-medium">Unlimited</p>
+                  )}
                 </div>
-                <div className="h-12 w-12 rounded-full bg-secondary/10 flex items-center justify-center">
+              </div>
+
+              {/* Total Cards */}
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0">
                   <svg
-                    className="h-6 w-6 text-secondary"
+                    className="h-5 w-5 text-secondary"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -198,20 +173,17 @@ export default async function DashboardPage() {
                     />
                   </svg>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Active Decks</p>
-                  <p className="text-3xl font-bold text-foreground">{decksWithCards}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-muted-foreground">Total Cards</p>
+                  <p className="text-2xl font-bold text-foreground">{totalCards}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
+              </div>
+
+              {/* Active Decks */}
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
                   <svg
-                    className="h-6 w-6 text-accent-foreground"
+                    className="h-5 w-5 text-accent-foreground"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -224,10 +196,38 @@ export default async function DashboardPage() {
                     />
                   </svg>
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-muted-foreground">Active Decks</p>
+                  <p className="text-2xl font-bold text-foreground">{decksWithCards}</p>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+
+            {/* Deck Limit Progress Bar for Free Users */}
+            {hasDeckLimit && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="font-medium text-foreground">Deck Usage</span>
+                  <span className="text-muted-foreground">
+                    {totalDecks >= 3 ? 'Limit reached' : `${3 - totalDecks} remaining`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all ${
+                        totalDecks >= 3 ? 'bg-destructive' : 
+                        totalDecks >= 2 ? 'bg-yellow-500' : 
+                        'bg-primary'
+                      }`}
+                      style={{ width: `${(totalDecks / 3) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Deck Limit Warning for Free Users */}
         {hasDeckLimit && totalDecks >= 2 && totalDecks < 3 && (
@@ -277,6 +277,29 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-foreground mb-4">Quick Actions</h2>
+          <div className="flex justify-center">
+            <QuickStudyModal 
+              decks={userDecks}
+              deckCardCounts={deckCardCounts}
+              studySessions={serializedSessions}
+            >
+              <Card className="hover:bg-accent/50 transition-colors cursor-pointer w-full max-w-sm">
+                <CardContent className="p-4">
+                  <div className="flex flex-col items-center space-y-2 text-center">
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span className="text-sm font-medium">Quick Study</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </QuickStudyModal>
+          </div>
+        </div>
 
         {/* Recent Decks */}
         <div className="mb-8">
@@ -331,49 +354,6 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
           )}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="border-t border-border pt-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <QuickStudyModal 
-              decks={userDecks}
-              deckCardCounts={deckCardCounts}
-              studySessions={serializedSessions}
-            >
-              <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex flex-col items-center space-y-2 text-center">
-                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <span className="text-sm font-medium">Quick Study</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </QuickStudyModal>
-            
-            <StatsModal
-              totalDecks={totalDecks}
-              totalCards={totalCards}
-              decksWithCards={decksWithCards}
-              hasUnlimitedDecks={hasUnlimitedDecks}
-              hasDeckLimit={hasDeckLimit}
-              studySessions={serializedSessions}
-            >
-              <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex flex-col items-center space-y-2 text-center">
-                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    <span className="text-sm font-medium">Statistics</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </StatsModal>
-          </div>
         </div>
       </div>
     </div>
